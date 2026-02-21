@@ -6,6 +6,10 @@ from textwrap import dedent
 import pytest
 
 
+def time_point(content: str):
+    print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), content)
+
+
 def e2e_test(func):
     return pytest.mark.skipif(
         os.getenv("TEST_E2E", "false") != "true",
@@ -15,7 +19,7 @@ def e2e_test(func):
 
 def exec(cmd: str, **kwargs) -> subprocess.CompletedProcess[str]:
     cmd = dedent(cmd).strip()
-    print(f"cmd: {cmd}")
+    time_point(f"cmd: {cmd}")
 
     proc = subprocess.run(
         args=cmd,
@@ -26,7 +30,8 @@ def exec(cmd: str, **kwargs) -> subprocess.CompletedProcess[str]:
         check=False,
         **kwargs,
     )
-    print(proc.stdout, proc.stderr)
+    time_point(f"stdout: {proc.stdout}")
+    time_point(f"stderr: {proc.stderr}")
     return proc
 
 
@@ -67,6 +72,7 @@ def comfy_cli(workspace):
 
 @e2e_test
 def test_model(comfy_cli):
+    time_point("before load model")
     url = "https://huggingface.co/guoyww/animatediff/resolve/cd71ae134a27ec6008b968d6419952b0c0494cf2/mm_sd_v14.ckpt?download=true"
     path = os.path.join("models", "animatediff_models")
     proc = exec(
@@ -76,6 +82,7 @@ def test_model(comfy_cli):
     )
     assert 0 == proc.returncode
 
+    time_point("before list")
     proc = exec(
         f"""
             {comfy_cli} model list --relative-path {path}
@@ -84,6 +91,7 @@ def test_model(comfy_cli):
     assert 0 == proc.returncode
     assert "animatediff_models" in proc.stdout
 
+    time_point("before remove")
     proc = exec(
         f"""
             {comfy_cli} model remove --relative-path {path} --model-names animatediff_models --confirm
@@ -94,6 +102,7 @@ def test_model(comfy_cli):
 
 @e2e_test
 def test_node(comfy_cli, workspace):
+    time_point("before node install")
     node = "comfyui-animatediff-evolved"
     proc = exec(
         f"""
@@ -102,6 +111,7 @@ def test_node(comfy_cli, workspace):
     )
     assert 0 == proc.returncode
 
+    time_point("before node reinstall")
     proc = exec(
         f"""
             {comfy_cli} node reinstall {node}
@@ -109,6 +119,7 @@ def test_node(comfy_cli, workspace):
     )
     assert 0 == proc.returncode
 
+    time_point("before node show")
     proc = exec(
         f"""
             {comfy_cli} node show all
@@ -117,6 +128,7 @@ def test_node(comfy_cli, workspace):
     assert 0 == proc.returncode
     assert node in proc.stdout
 
+    time_point("before node update")
     proc = exec(
         f"""
             {comfy_cli} node update {node}
@@ -124,6 +136,7 @@ def test_node(comfy_cli, workspace):
     )
     assert 0 == proc.returncode
 
+    time_point("before node disable/enable")
     proc = exec(
         f"""
             {comfy_cli} node disable {node}
@@ -138,6 +151,7 @@ def test_node(comfy_cli, workspace):
     )
     assert 0 == proc.returncode
 
+    time_point("before node publish")
     pubID = "comfytest123"
     pubToken = "6075cf7b-47e7-4c58-a3de-38f59a9bcc22"
     proc = exec(
@@ -155,6 +169,7 @@ def test_run(comfy_cli):
     url = "https://huggingface.co/Comfy-Org/stable-diffusion-v1-5-archive/resolve/main/v1-5-pruned-emaonly-fp16.safetensors?download=true"
     path = os.path.join("models", "checkpoints")
     name = "v1-5-pruned-emaonly.safetensors"
+    time_point("before download model")
     proc = exec(
         f"""
             {comfy_cli} model download --url {url} --relative-path {path} --filename {name}
@@ -162,6 +177,7 @@ def test_run(comfy_cli):
     )
     assert 0 == proc.returncode
 
+    time_point("before run workflow")
     workflow = os.path.join(os.path.dirname(os.path.realpath(__file__)), "workflow.json")
     proc = exec(
         f"""
